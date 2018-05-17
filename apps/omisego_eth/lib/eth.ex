@@ -222,6 +222,9 @@ defmodule OmiseGO.Eth do
     {:ok, {root, created_at}}
   end
 
+  def challenge(challenge, contract \\ nil) do
+  end
+
   defp call_contract_value(contract, signature) do
     {:ok, [value]} = call_contract(contract, signature, [], [{:uint, 256}])
     {:ok, value}

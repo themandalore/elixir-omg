@@ -111,4 +111,7 @@ defmodule OmiseGO.EthTest do
     {:ok, addr} = Eth.authority(contract.address)
     assert contract.from == "0x" <> Base.encode16(addr, case: :lower)
   end
+
+  test "submits a challenge" do
+  end
 end

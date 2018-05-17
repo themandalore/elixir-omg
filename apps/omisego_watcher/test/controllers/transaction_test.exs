@@ -68,6 +68,12 @@ defmodule OmiseGOWatcherWeb.Controller.TransactionTest do
     assert expected_transaction_2 == delete_meta(TransactionDB.get(txid_2))
   end
 
+  test "gets all transactions from a block" do
+  end
+
+  test "gets transaction that spends utxo" do
+  end
+
   defp create_expected_transaction(txid, signed_tx, txblknum, txindex) do
     %TransactionDB{
       txblknum: txblknum,

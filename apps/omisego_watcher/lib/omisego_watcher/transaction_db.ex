@@ -91,4 +91,10 @@ defmodule OmiseGOWatcher.TransactionDB do
     |> cast(attrs, @field_names)
     |> validate_required(@field_names)
   end
+
+  def get_transaction_spending_utxo(utxo) do
+  end
+
+  def get_transactions_from_block(txblknum) do
+  end
 end

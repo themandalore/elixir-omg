@@ -24,4 +24,10 @@ defmodule OmiseGO.API.Block do
     {:ok, root} = MerkleTree.build(hashed_txs, &Crypto.hash/1, @transaction_merkle_tree_height)
     %Block{block | hash: root.value}
   end
+
+  @doc """
+  Returns proof that transacting with given txindex belongs to the block
+  """
+  def prove_transaction(%__MODULE__{transactions: txs} = block, txindex) do
+  end
 end

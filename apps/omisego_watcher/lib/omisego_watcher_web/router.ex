@@ -12,4 +12,8 @@ defmodule OmiseGOWatcherWeb.Router do
   scope "/transactions", OmiseGOWatcherWeb do
     get("/:id", Controller.Transaction, :get)
   end
+
+  scope "/challenges", OmiseGOWatcherWeb do
+    post("/", Controller.Challenge, :challenge)
+  end
 end
