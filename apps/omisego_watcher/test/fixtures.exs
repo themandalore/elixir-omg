@@ -123,6 +123,9 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
 
     Application.put_env(:omisego_db, :leveldb_path, db_path, persistent: true)
     OmiseGO.DB.init()
+
+    # TODO: possible source of flakiness is omisego_db not cleaning up fast enough? find a better solution
+    Process.sleep(500)
   end
 
   deffixture watcher(db_init) do
