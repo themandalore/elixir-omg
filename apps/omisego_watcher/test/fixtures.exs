@@ -37,9 +37,6 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
     config_file_path = Briefly.create!(extname: ".exs")
     db_path = Briefly.create!(directory: true)
 
-    # NOTE chmod required, because we're running child chain using exexec and geth user
-    # :ok = File.chmod(db_path, 0o777)
-
     config_file_path
     |> File.open!([:write])
     |> IO.binwrite("""
@@ -74,9 +71,7 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
 
     {:ok, _db_proc, _ref, [{:stream, db_out, _stream_server}]} =
       Exexec.run_link(
-        "echo Mix.env is $MIX_ENV; mix local.hex --force; mix run --no-start -e 'OmiseGO.DB.init()' --config #{
-          config_file_path
-        } 2>&1",
+        "mix run --no-start -e 'OmiseGO.DB.init()' --config #{config_file_path} 2>&1",
         exexec_opts_for_mix
       )
 
@@ -84,7 +79,7 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
 
     # TODO I wish we could ensure_started just one app here, but in test env jsonrpc doesn't depend on api :(
     child_chain_mix_cmd =
-      "echo Mix.env is $MIX_ENV; mix local.hex --force; mix run --no-start --no-halt --config #{config_file_path} -e " <>
+      "mix run --no-start --no-halt --config #{config_file_path} -e " <>
         "'Application.ensure_all_started(:omisego_api); Application.ensure_all_started(:omisego_jsonrpc)' 2>&1"
 
     Logger.debug(fn -> "Starting child_chain" end)
