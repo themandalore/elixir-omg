@@ -21,8 +21,6 @@ podTemplate(
         }
 
         stage('Build') {
-            sh("mix do local.hex --force, local.rebar --force")
-            sh("apt-get install -y libgmp3-dev")
             withEnv(["MIX_ENV=test"]) {
                 sh("mix do deps.get, deps.compile, compile")
             }
@@ -37,9 +35,9 @@ podTemplate(
         }
 
         stage('Integration test') {
-           sh("echo \"config :logger, level: :debug\" >> config/test.config.jenkins")
+           sh("echo \"config :logger, level: :debug\" > tmpconfig")
            withEnv(["MIX_ENV=test"]) {
-               sh("mix do loadconfig config/test.config.jenkins, test --no-start --only integration")
+               sh("mix do loadconfig tmpconfig, test --no-start --only integration")
            }
         }
 
