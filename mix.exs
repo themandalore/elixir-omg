@@ -30,4 +30,3 @@ defmodule OmiseGO.Umbrella.MixProject do
     ]
   end
 end
- 

@@ -34,14 +34,13 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
   end
 
   deffixture child_chain(config_map) do
-    test_sid = Integer.to_string(:rand.uniform(10_000_000))
-    file_path = "/tmp/omisego/config_" <> test_sid <> ".exs"
-    db_path = "/tmp/omisego/db_" <> test_sid
+    config_file_path = Briefly.create!(extname: ".exs")
+    db_path = Briefly.create!(directory: true)
 
     # NOTE chmod required, because we're running child chain using exexec and geth user
     :ok = File.chmod(db_path, 0o777)
 
-    file_path
+    config_file_path
     |> File.open!([:write])
     |> IO.binwrite("""
       #{
@@ -62,7 +61,7 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
     """)
     |> File.close()
 
-    {:ok, config} = File.read(file_path)
+    {:ok, config} = File.read(config_file_path)
     Logger.debug(fn -> IO.ANSI.format([:blue, :bright, config], true) end)
 
     Logger.debug(fn -> "Starting db_init" end)
@@ -74,13 +73,18 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
     ]
 
     {:ok, _db_proc, _ref, [{:stream, db_out, _stream_server}]} =
-      Exexec.run_link("echo Mix.env is $MIX_ENV; mix local.hex --force; mix run --no-start -e 'OmiseGO.DB.init()' --config #{file_path} 2>&1", exexec_opts_for_mix)
+      Exexec.run_link(
+        "echo Mix.env is $MIX_ENV; mix local.hex --force; mix run --no-start -e 'OmiseGO.DB.init()' --config #{
+          config_file_path
+        } 2>&1",
+        exexec_opts_for_mix
+      )
 
     db_out |> Enum.each(&log_output("db_init", &1))
 
     # TODO I wish we could ensure_started just one app here, but in test env jsonrpc doesn't depend on api :(
     child_chain_mix_cmd =
-      "echo Mix.env is $MIX_ENV; mix local.hex --force; mix run --no-start --no-halt --config #{file_path} -e " <>
+      "echo Mix.env is $MIX_ENV; mix local.hex --force; mix run --no-start --no-halt --config #{config_file_path} -e " <>
         "'Application.ensure_all_started(:omisego_api); Application.ensure_all_started(:omisego_jsonrpc)' 2>&1"
 
     Logger.debug(fn -> "Starting child_chain" end)
@@ -98,7 +102,7 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
       _ = Process.monitor(child_chain_proc)
       :normal = Exexec.stop_and_wait(child_chain_proc)
 
-      File.rm(file_path)
+      File.rm(config_file_path)
       File.rm_rf(db_path)
     end)
 
@@ -114,11 +118,10 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
   deffixture(bob, do: generate_entity())
 
   deffixture db_init do
-    test_sid = Integer.to_string(:rand.uniform(10_000_000))
-    dir = "/tmp/omisego/db_" <> test_sid
-    File.mkdir_p!(dir)
+    {:ok, _} = Application.ensure_all_started(:briefly)
+    db_path = Briefly.create!(directory: true)
 
-    Application.put_env(:omisego_db, :leveldb_path, dir, persistent: true)
+    Application.put_env(:omisego_db, :leveldb_path, db_path, persistent: true)
     OmiseGO.DB.init()
   end
 
