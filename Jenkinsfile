@@ -17,30 +17,38 @@ podTemplate(
 ) {
     node(label) {
         stage('Checkout') {
-            checkout scm
+            becomeUser("geth") {
+                checkout scm
+            }
         }
 
         stage('Build') {
-            sh("mix do local.hex --force, local.rebar --force")
-            sh("apt-get install -y libgmp3-dev")
-            withEnv(["MIX_ENV=test"]) {
-                sh("mix do deps.get, deps.compile, compile")
+            becomeUser("geth") {
+                sh("mix do local.hex --force, local.rebar --force")
+                sh("apt-get install -y libgmp3-dev")
+                withEnv(["MIX_ENV=test"]) {
+                    sh("mix do deps.get, deps.compile, compile")
+                }
             }
         }
 
         stage('Build Contracts') {
-            withEnv(["SOLC_BINARY=/home/jenkins/.py-solc/solc-v0.4.18/bin/solc"]) {
-                dir("populus") {
-                    sh("pip install -r requirements.txt && python -m solc.install v0.4.18 && populus compile")
+            becomeUser("geth") {
+                withEnv(["SOLC_BINARY=/home/jenkins/.py-solc/solc-v0.4.18/bin/solc"]) {
+                    dir("populus") {
+                        sh("pip install -r requirements.txt && python -m solc.install v0.4.18 && populus compile")
+                    }
                 }
             }
         }
 
         stage('Integration test') {
-           sh("echo \"config :logger, level: :debug\" >> config/test.config.jenkins")
-           withEnv(["MIX_ENV=test"]) {
-               sh("mix do loadconfig config/test.config.jenkins, test --no-start --only integration")
-           }
+            becomeUser("geth") {
+                sh("echo \"use Mix.Config; config :logger, level: :debug\" > tmpconfig")
+                withEnv(["MIX_ENV=test"]) {
+                    sh("mix do loadconfig tmpconfig, test --no-start --only integration")
+                }
+            }
         }
 
         stage('Unit test') {
