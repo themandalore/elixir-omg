@@ -41,8 +41,7 @@ defmodule OmiseGO.DB do
   end
 
   def init do
-    path = IO.inspect Application.get_env(:omisego_db, :leveldb_path)
-    :ok = File.chmod(path, 0o777)
+    path = Application.get_env(:omisego_db, :leveldb_path)
     :ok = File.mkdir_p(path)
 
     if !Enum.empty?(File.ls!(path)) do
