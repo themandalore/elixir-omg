@@ -21,6 +21,7 @@ podTemplate(
         }
 
         stage('Build') {
+            sh("mix do local.hex --force, local.rebar --force")
             withEnv(["MIX_ENV=test"]) {
                 sh("mix do deps.get, deps.compile, compile")
             }
