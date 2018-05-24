@@ -28,12 +28,6 @@ podTemplate(
             }
         }
 
-        stage('Unit test') {
-            withEnv(["MIX_ENV=test"]) {
-                sh("mix coveralls.html --no-start --umbrella")
-            }
-        }
-
         stage('Build Contracts') {
             withEnv(["SOLC_BINARY=/home/jenkins/.py-solc/solc-v0.4.18/bin/solc"]) {
                 dir("populus") {
@@ -43,8 +37,15 @@ podTemplate(
         }
 
         stage('Integration test') {
+           sh("echo \"config :logger, level: :debug\" >> config/test.config.jenkins")
+           withEnv(["MIX_ENV=test"]) {
+               sh("mix do loadconfig config/test.config.jenkins, test --no-start --only integration")
+           }
+        }
+
+        stage('Unit test') {
             withEnv(["MIX_ENV=test"]) {
-                sh("mix do loadconfig config/test.config.jenkins, test --no-start --only integration")
+                sh("mix coveralls.html --no-start --umbrella")
             }
         }
 
