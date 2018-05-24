@@ -38,7 +38,7 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
     db_path = Briefly.create!(directory: true)
 
     # NOTE chmod required, because we're running child chain using exexec and geth user
-    :ok = File.chmod(db_path, 0o777)
+    # :ok = File.chmod(db_path, 0o777)
 
     config_file_path
     |> File.open!([:write])

@@ -4,5 +4,5 @@ use Mix.Config
 # This setting is needed because we are running test from root on Jenkins
 # and erlexec's is hell-bent on doing it safely.
 config :erlexec,
-  user: 'geth',
-  limit_users: ['geth']
+  user: 'root',
+  limit_users: ['root']
