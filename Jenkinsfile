@@ -36,8 +36,8 @@ podTemplate(
         }
 
         stage('Integration test') {
-           sh("echo \"config :logger, level: :debug\" > tmpconfig")
-           withEnv(["MIX_ENV=test"]) {
+           sh("echo \"use Mix.Config; config :logger, level: :debug\" > tmpconfig")
+           withEnv(["MIX_ENV=test", "SHELL=/bin/bash"]) {
                sh("mix do loadconfig tmpconfig, test --no-start --only integration")
            }
         }
