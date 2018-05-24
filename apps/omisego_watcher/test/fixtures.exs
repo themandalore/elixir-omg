@@ -67,7 +67,7 @@ defmodule OmiseGOWatcher.TrackerOmisego.Fixtures do
     exexec_opts_for_mix = [
       stdout: :stream,
       cd: "../..",
-      env: ["MIX_ENV=" <> to_string(Mix.env())]
+      env: %{"MIX_ENV" => to_string(Mix.env())}
     ]
 
     {:ok, _db_proc, _ref, [{:stream, db_out, _stream_server}]} =
