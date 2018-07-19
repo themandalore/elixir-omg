@@ -44,7 +44,7 @@ defmodule OmiseGO.Performance.SenderServer do
   @doc """
   Starts the process.
   """
-  @spec start_link({seqnum :: integer, ntx_to_send :: integer}) :: {:ok, pid}
+  @spec start_link({seqnum :: integer, ntx_to_send :: integer, deposits :: list(API.State.Core.deposit) | nil}) :: {:ok, pid}
   def start_link(args) do
     GenServer.start_link(__MODULE__, args)
   end
@@ -55,21 +55,44 @@ defmodule OmiseGO.Performance.SenderServer do
     * Senders are assigned sequential positive int starting from 1, senders are initialized in order of seqnum.
       This ensures all senders' deposits are accepted.
   """
-  @spec init({seqnum :: integer, ntx_to_send :: integer}) :: {:ok, state()}
-  def init({seqnum, ntx_to_send}) do
+  @spec init({seqnum :: integer, ntx_to_send :: integer, deposits :: list(API.State.Core.deposit) | nil}) :: {:ok, state()}
+  def init({seqnum, ntx_to_send, deposits}) do
     _ = Logger.debug(fn -> "[#{seqnum}] +++ init/1 called with requests: '#{ntx_to_send}' +++" end)
 
+    deposit = if deposits, do: Enum.at(deposits, seqnum - 1), else: nil
+
+    _ = Logger.info(fn -> "Provided deposit #{inspect(deposit)}, depositing if nil" end)
+
+    %{owner: spender, blknum: deposit_blknum, amount: start_amount} = deposit || do_spender_and_deposit(seqnum)
+    send(self(), :do)
+
+    {:ok,
+     %__MODULE__{
+       seqnum: seqnum,
+       ntx_to_send: ntx_to_send,
+       spender: spender,
+       last_tx: %LastTx{
+         # initial state takes deposited value, put there on :init
+         blknum: deposit_blknum,
+         txindex: 0,
+         oindex: 0,
+         amount: start_amount
+       }
+     }}
+  end
+
+  defp do_spender_and_deposit(seqnum) do
     spender = generate_entity()
     _ = Logger.debug(fn -> "[#{seqnum}]: Address #{Base.encode64(spender.addr)}" end)
 
-    deposit_value = 10 * ntx_to_send
+    deposit_value = 10_000_000_000_000_000_000_001
     owner_enc = "0x" <> Base.encode16(spender.addr, case: :lower)
-    :ok = OmiseGO.API.State.deposit([%{owner: owner_enc, currency: @eth, amount: deposit_value, blknum: seqnum}])
+    deposit = %{owner: owner_enc, currency: @eth, amount: deposit_value, blknum: seqnum}
+    :ok = OmiseGO.API.State.deposit([deposit])
 
-    _ = Logger.debug(fn -> "[#{seqnum}]: Deposited #{deposit_value} OMG" end)
+    _ = Logger.debug(fn -> "[#{seqnum}]: Deposited #{deposit_value}" end)
 
-    send(self(), :do)
-    {:ok, init_state(seqnum, ntx_to_send, spender)}
+    %{deposit | owner: spender}
   end
 
   @doc """
@@ -198,27 +221,6 @@ defmodule OmiseGO.Performance.SenderServer do
     {:ok, pub} = Crypto.generate_public_key(priv)
     {:ok, addr} = Crypto.generate_address(pub)
     %{priv: priv, addr: addr}
-  end
-
-  # Generates module's initial state
-  @spec init_state(
-          seqnum :: pos_integer,
-          nreq :: pos_integer,
-          spender :: %{priv: Crypto.priv_key_t(), addr: Crypto.pub_key_t()}
-        ) :: __MODULE__.state()
-  defp init_state(seqnum, nreq, spender) do
-    %__MODULE__{
-      seqnum: seqnum,
-      ntx_to_send: nreq,
-      spender: spender,
-      last_tx: %LastTx{
-        # initial state takes deposited value, put there on :init
-        blknum: seqnum,
-        txindex: 0,
-        oindex: 0,
-        amount: 10 * nreq
-      }
-    }
   end
 
   # Generates next module's state

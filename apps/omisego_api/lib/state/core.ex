@@ -7,6 +7,8 @@ defmodule OmiseGO.API.State.Core do
   # TODO: rework macro so it can be called from test code only
   use OmiseGO.API.BlackBoxMe
 
+  require Logger
+
   @maximum_block_size 65_536
 
   defstruct [:height, :last_deposit_height, :utxos, pending_txs: [], tx_index: 0]
@@ -281,8 +283,13 @@ defmodule OmiseGO.API.State.Core do
         last_deposit_height: last_deposit_height
     }
 
+    log_deposits(deposits)
+
     {:ok, {event_triggers, db_updates}, new_state}
   end
+
+  defp log_deposits([]), do: :ok
+  defp log_deposits(deposits), do: _ = Logger.info(fn -> "Recognized deposits: #{inspect(deposits)}" end)
 
   defp utxo_to_db_put({utxo_position, utxo}), do: {:put, :utxo, %{utxo_position => utxo}}
 
