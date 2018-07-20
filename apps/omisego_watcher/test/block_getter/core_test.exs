@@ -131,10 +131,46 @@ defmodule OmiseGOWatcher.BlockGetter.CoreTest do
 
     {state, _} = block_height |> Core.init(interval, chunk_size) |> Core.get_new_blocks_numbers(35_000)
     assert {:ok, state} = Core.add_block(state, decoded_block)
-    assert {_, [%{transactions: [tx]}]} = Core.get_blocks_to_consume(state)
+    assert {_, [%{execables: execables}]} = Core.get_blocks_to_consume(state)
 
     # check feasability of transactions from block to consume at the API.State
-    assert {:ok, _, _} = API.State.Core.exec(tx, %{@eth => 0}, state_alice_deposit)
+    assert [{:ok, _, _}] =
+             for(
+               %Core.Execable{payload: to_exec} <- execables,
+               do: apply(API.State.Core, :exec, to_exec ++ [state_alice_deposit])
+             )
+  end
+
+  @tag fixtures: [:alice, :bob]
+  test "can decode and exec tx with different currencies, always with no fee required", %{alice: alice, bob: bob} do
+    # FIXME DRY the tests that process a block?
+    other_currency = <<1::160>>
+
+    %Block{hash: requested_hash} =
+      block =
+      Block.hashed_txs_at(
+        [
+          API.TestHelper.create_recovered([{1, 0, 0, alice}], other_currency, [{bob, 7}, {alice, 3}]),
+          API.TestHelper.create_recovered([{2, 0, 0, alice}], @eth, [{bob, 7}, {alice, 3}])
+        ],
+        26_000
+      )
+
+    assert {:ok, decoded_block} = Core.decode_validate_block(Client.encode(block), requested_hash, 26_000)
+
+    block_height = 25_000
+    interval = 1_000
+    chunk_size = 10
+
+    {state, _} = block_height |> Core.init(interval, chunk_size) |> Core.get_new_blocks_numbers(35_000)
+    assert {:ok, state} = Core.add_block(state, decoded_block)
+
+    {_new_state, [%{execables: execables}]} = Core.get_blocks_to_consume(state)
+
+    assert [
+             %Core.Execable{payload: [%Transaction.Recovered{}, %{^other_currency => 0}]},
+             %Core.Execable{payload: [%Transaction.Recovered{}, %{@eth => 0}]}
+           ] = execables
   end
 
   @tag fixtures: [:alice]

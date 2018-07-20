@@ -2,6 +2,8 @@ defmodule OmiseGOWatcher.BlockGetter.Core do
   @moduledoc false
 
   alias OmiseGO.API.Block
+  alias OmiseGO.API.State.Transaction
+  alias OmiseGO.API.State.Transaction.{Recovered, Signed}
 
   defstruct [
     :last_consumed_block,
@@ -20,6 +22,21 @@ defmodule OmiseGOWatcher.BlockGetter.Core do
           maximum_number_of_pending_blocks: pos_integer,
           block_to_consume: %{non_neg_integer => OmiseGO.API.Block.t()}
         }
+
+  defmodule Execable do
+    @moduledoc """
+    Struct for strong typing of what decode_validate_block passes onto the imperative shell, and then -> State.exec
+    """
+
+    defstruct [
+      # payload represents a single set of args passed to State.exec, eg. [recovered_tx, %{cur12 => fee}]
+      :payload
+    ]
+
+    @type t() :: %__MODULE__{
+            payload: list
+          }
+  end
 
   @spec init(non_neg_integer, pos_integer, pos_integer) :: %__MODULE__{}
   def init(block_number, child_block_interval, maximum_number_of_pending_blocks \\ 10) do
@@ -133,13 +150,15 @@ defmodule OmiseGOWatcher.BlockGetter.Core do
          nil <- Enum.find(transaction_decode_results, &(!match?({:ok, _}, &1))),
          transactions <- Enum.map(transaction_decode_results, &elem(&1, 1)),
          {:ok, returned_decoded_hash} <- decode_hash(returned_hash),
-         true <- returned_decoded_hash == requested_hash || {:error, :bad_returned_hash} do
-      # hash the block yourself and compare
-      %Block{hash: calculated_hash} = Block.hashed_txs_at(transactions, number)
+         true <- returned_decoded_hash == requested_hash || {:error, :bad_returned_hash},
+         # hash the block yourself and compare
+         %Block{hash: calculated_hash} = Block.hashed_txs_at(transactions, number),
+         true <- calculated_hash == requested_hash || {:error, :incorrect_hash} do
+      execables =
+        for %Recovered{signed_tx: %Signed{raw_tx: %Transaction{cur12: cur12}}} = tx <- transactions,
+            do: %Execable{payload: [tx, %{cur12 => 0}]}
 
-      if calculated_hash == requested_hash,
-        do: {:ok, %{transactions: transactions, number: requested_number, hash: returned_decoded_hash}},
-        else: {:error, :incorrect_hash}
+      {:ok, %{execables: execables, number: requested_number, hash: returned_decoded_hash}}
     end
   end
 
