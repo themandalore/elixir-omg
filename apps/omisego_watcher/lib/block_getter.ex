@@ -16,22 +16,22 @@ defmodule OmiseGOWatcher.BlockGetter do
 
   @spec get_block(pos_integer()) :: {:ok, Block.t()}
   def get_block(requested_number) do
-    with {:ok, {requested_hash, _time}} <- Eth.get_child_chain(requested_number),
-         {:ok, json_block} <- OmiseGO.JSONRPC.Client.call(:get_block, %{hash: requested_hash}) do
-      case Core.decode_validate_block(json_block, requested_hash, requested_number) do
-        {:ok, map } ->
-          {:ok, map}
-          {:error , error_type } ->
-            Eventer.emit_event(%Event.InvalidBlock{
-              eth_hash_block: requested_hash,
-              child_chain_hash_block: json_block.hash,
-              transactions: json_block.transactions,
-              number: requested_number,
-              error_type: error_type
-            })
-            {:error , error_type }
-      end
-    end
+    {:ok, {requested_hash, _time}} = Eth.get_child_chain(requested_number)
+    rpc_response = OmiseGO.JSONRPC.Client.call(:get_block, %{hash: requested_hash})
+    Core.decode_validate_block(rpc_response, requested_hash, requested_number)
+    #     {:ok, map } ->
+    #       {:ok, map}
+    #       {:error , error_type } ->
+    #         Eventer.emit_event(%Event.InvalidBlock{
+    #           eth_hash_block: requested_hash,
+    #           child_chain_hash_block: json_block.hash,
+    #           transactions: json_block.transactions,
+    #           number: requested_number,
+    #           error_type: error_type
+    #         })
+    #         {:error , error_type }
+    #   end
+    # end
   end
 
   def consume_block(%{transactions: transactions, number: blknum, zero_fee_requirements: fees} = block) do
@@ -76,6 +76,13 @@ defmodule OmiseGOWatcher.BlockGetter do
     {:noreply, new_state}
   end
 
+  # NOTE don't pattern match - we blindly forward whatever was received to Core. Logs need moving to the Core
+  # NOTE except for this it is just the same clause as used to be
+  def handle_info({_ref, {:ok, maybe_block}}, state) do
+    {:ok, new_state, blocks_to_consume} = Core.got_block(state, block)
+  end
+
+  # NOTE you'd need to revert to old handle_infos
   def handle_info({_ref, {:get_block_failure, blknum, error_type}}, state) do
     with {:ok, new_state} <- Core.add_potential_block_withholding(state, blknum) do
       receive do

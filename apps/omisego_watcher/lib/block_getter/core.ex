@@ -110,10 +110,21 @@ defmodule OmiseGOWatcher.BlockGetter.Core do
       }
 
       {state2, list_block_to_consume} = get_blocks_to_consume(state1)
-      {:ok, state2, list_block_to_consume}
+      # "unwithhoold" this block
+
+      # also return an empty list of events here that get streamed into Eventer.notify
+      {:ok, state2, list_block_to_consume, []}
     else
       error -> {:error, error}
     end
+  end
+
+  # FIXME here is the interesting part
+  def got_block(%__MODULE__{withholdings: withholdings}, %Withholding{number: number}) do
+    # register withholding
+    # mark block number number as "processed" so it is retried _automatically_ whenever get_new_blocks_numbers is called (no additional Task running!)
+    # if too many withholdings return a non-empty list of event_triggers that get streamed into Eventer.notify
+    {:ok, state, [], either [] (all okay) or [:block_withholding_event_trigger]}
   end
 
   # Returns a consecutive continuous list of finished blocks, that always begins with oldest unconsumed block
@@ -195,8 +206,10 @@ defmodule OmiseGOWatcher.BlockGetter.Core do
              | :malformed_transaction
              | :bad_signature_length
              | :hash_decoding_error}
+  def decode_validate_block(rpc_response, requested_hash, requested_number)
+
   def decode_validate_block(
-        %{hash: returned_hash, transactions: transactions, number: number},
+        {:ok, %{hash: returned_hash, transactions: transactions, number: number}},
         requested_hash,
         requested_number
       ) do
@@ -226,4 +239,12 @@ defmodule OmiseGOWatcher.BlockGetter.Core do
         else: {:error, :incorrect_hash}
     end
   end
+
+  # FIXME maybe better a specific clause for timeout, which would be the most evident withholding case
+
+  def decode_validate_block(_non_ok_response, _requested_hash, requested_number) do
+    # yes, ":ok"!
+    {:ok, %PotentialWithholding{blknum: requested_number}}
+  end
+
 end
