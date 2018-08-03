@@ -4,6 +4,7 @@ defmodule OmiseGOWatcher.TransactionDB do
   """
   use Ecto.Schema
 
+  import OmiseGO.API.UtxoPosition, only: :macros
   import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
 
@@ -116,7 +117,7 @@ defmodule OmiseGOWatcher.TransactionDB do
   end
 
   @spec get_transaction_challenging_utxo(UtxoPosition.t()) :: {:ok, map()} | :utxo_not_spent
-  def get_transaction_challenging_utxo({blknum, txindex, oindex}) do
+  def get_transaction_challenging_utxo(utxo_position(blknum: blknum, txindex: txindex, oindex: oindex)) do
     query =
       from(
         tx_db in __MODULE__,

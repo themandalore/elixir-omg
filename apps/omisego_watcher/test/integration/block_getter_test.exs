@@ -15,6 +15,7 @@ defmodule OmiseGOWatcher.BlockGetterTest do
   alias OmiseGOWatcherWeb.ByzantineChannel
   alias OmiseGOWatcherWeb.TransferChannel
 
+  import OmiseGO.API.UtxoPosition, only: :macros
   import ExUnit.CaptureLog
 
   @moduletag :integration
@@ -96,7 +97,7 @@ defmodule OmiseGOWatcher.BlockGetterTest do
 
     {:ok, height} = Eth.get_ethereum_height()
 
-    utxo_pos = UtxoPosition.new(block_nr, 0, 0) |> UtxoPosition.encode()
+    utxo_pos = utxo_position(blknum: block_nr, txindex: 0, oindex: 0)  |> UtxoPosition.encode()
 
     assert {:ok, [%{amount: 7, utxo_pos: utxo_pos, owner: alice_address, token: @eth}]} ==
              Eth.get_exits(0, height, contract.contract_addr)

@@ -9,6 +9,8 @@ defmodule OmiseGOWatcher.Challenger.Core do
   alias OmiseGOWatcher.Challenger.Challenge
   alias OmiseGOWatcher.TransactionDB
 
+  import OmiseGO.API.UtxoPosition, only: :macros
+
   @block_offset 1_000_000_000
   @transaction_offset 10_000
 
@@ -75,9 +77,9 @@ defmodule OmiseGOWatcher.Challenger.Core do
   end
 
   defp get_challenging_utxo(%TransactionDB{txblknum: blknum, txindex: txindex, amount1: 0}),
-    do: UtxoPosition.new(blknum, txindex, 1)
+    do: utxo_position(blknum: blknum, txindex: txindex, oindex: 1)
 
   defp get_challenging_utxo(%TransactionDB{txblknum: blknum, txindex: txindex}),
-    do: UtxoPosition.new(blknum, txindex, 0)
+    do: utxo_position(blknum: blknum, txindex: txindex, oindex: 0)
 
 end
