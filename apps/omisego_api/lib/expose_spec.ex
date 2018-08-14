@@ -124,29 +124,49 @@ defmodule OmiseGO.API.ExposeSpec do
     if testresult, do: :problem_with_arity, else: :ok
   end
 
-  defmacro __using__(_opts) do
-    quote do
-      import OmiseGO.API.ExposeSpec
+  # defmacro __using__(_opts) do
+  #   quote do
+  #     import OmiseGO.API.ExposeSpec
+  #
+  #     IO.inspect Code.Typespec.fetch_specs(__MODULE__)
+  #
+  #     @before_compile OmiseGO.API.ExposeSpec
+  #   end
+  # end
+  #
+  # defmacro __before_compile__(env) do
+  #   module = env.module
+  #
+  #   nice_spec =
+  #     module
+  #     # |> Module.get_attribute(:specs)
+  #     |> Code.Typespec.fetch_specs()
+  #     |> IO.inspect
+  #     |> Enum.map(&function_spec/1)
+  #     |> Enum.filter(fn x -> x != :incomplete_spec end)
+  #     |> Enum.map(fn map -> {map[:name], map} end)
+  #     # |> IO.inspect
+  #
+  #   :ok = arity_sanity_check(nice_spec)
+  #   escaped = Macro.escape(Map.new(nice_spec))
+  #
+  #   quote do
+  #     def get_specs, do: unquote(escaped)
+  #   end
+  # end
 
-      @before_compile OmiseGO.API.ExposeSpec
+  def get_specs(module) do
+    {:ok, specs} = Code.Typespec.fetch_specs(module)
+      nice_spec =
+        specs
+        |> IO.inspect
+        |> Enum.map(&function_spec/1)
+        |> Enum.filter(fn x -> x != :incomplete_spec end)
+        |> Enum.map(fn map -> {map[:name], map} end)
+        # |> IO.inspect
+
+      :ok = arity_sanity_check(nice_spec)
+      nice_spec
     end
-  end
 
-  defmacro __before_compile__(env) do
-    module = env.module
-
-    nice_spec =
-      module
-      |> Module.get_attribute(:spec)
-      |> Enum.map(&function_spec/1)
-      |> Enum.filter(fn x -> x != :incomplete_spec end)
-      |> Enum.map(fn map -> {map[:name], map} end)
-
-    :ok = arity_sanity_check(nice_spec)
-    escaped = Macro.escape(Map.new(nice_spec))
-
-    quote do
-      def get_specs, do: unquote(escaped)
-    end
-  end
 end

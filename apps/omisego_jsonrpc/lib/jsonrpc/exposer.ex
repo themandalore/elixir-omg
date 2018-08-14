@@ -33,7 +33,8 @@ defmodule OmiseGO.JSONRPC.Exposer do
            OmiseGO.API.ExposeSpec.RPCTranslate.to_fa(
              method,
              params,
-             api.get_specs(),
+             # api.get_specs(),
+             OmiseGO.API.ExposeSpec.get_specs(api),
              &OmiseGO.JSONRPC.Client.on_match/3
            ),
          {:ok, result} <- apply_call(api, fname, args) do

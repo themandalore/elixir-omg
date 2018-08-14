@@ -15,8 +15,8 @@
 defmodule OmiseGO.API.ExposeSpecTest do
   use ExUnit.Case
 
-  defmodule SomeModule do
-    use OmiseGO.API.ExposeSpec
+  @testmodule (defmodule SomeModule do
+    # use OmiseGO.API.ExposeSpec
 
     @spec basic(x :: integer, y :: integer) :: integer
     def basic(x, y) do
@@ -62,11 +62,14 @@ defmodule OmiseGO.API.ExposeSpecTest do
     def triple(_x) do
       :ok
     end
-  end
+
+    # def get_specs(), do: OmiseGO.API.ExposeSpec.get_specs(__MODULE__)
+  end)
 
   test "expected list of parsed specs" do
+    {:module, module, bytecode, _} = @testmodule
     assert [:alts, :basic, :complex_return, :exported, :lazy, :lists, :triple] ==
-             Enum.sort(Map.keys(SomeModule.get_specs()))
+             Enum.sort(Map.keys(OmiseGO.API.ExposeSpec.get_specs bytecode))
   end
 
   test "parses aliased types" do

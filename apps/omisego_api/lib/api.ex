@@ -21,7 +21,7 @@ defmodule OmiseGO.API do
   """
 
   alias OmiseGO.API.{Core, FeeChecker, FreshBlocks, State}
-  use OmiseGO.API.ExposeSpec
+  # use OmiseGO.API.ExposeSpec
   use OmiseGO.API.LoggerExt
 
   @spec submit(transaction :: bitstring) ::
