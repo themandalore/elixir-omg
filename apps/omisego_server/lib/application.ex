@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-defmodule OmiseGO.API.Application do
+defmodule OmiseGO.Server.Application do
   @moduledoc """
   The application here is the Child chain server and its API.
   See here (children) for the processes that compose into the Child Chain server.
@@ -25,6 +25,8 @@ defmodule OmiseGO.API.Application do
 
   def start(_type, _args) do
     event_listener_config = get_event_listener_config()
+
+    omisego_port = Application.get_env(:omisego_jsonrpc, :omisego_api_rpc_port)
 
     children = [
       {OmiseGO.API.State, []},
@@ -40,10 +42,12 @@ defmodule OmiseGO.API.Application do
         OmiseGO.API.EthereumEventListener,
         [event_listener_config, &OmiseGO.Eth.get_exits/2, &State.exit_utxos/1],
         id: :exiter
-      )
+      ),
+      # exposing the API via JSONRPC
+      JSONRPC2.Servers.HTTP.child_spec(:http, OmiseGO.JSONRPC.Server.Handler, port: omisego_port)
     ]
 
-    _ = Logger.info(fn -> "Started application OmiseGO.API.Application" end)
+    _ = Logger.info(fn -> "Started application #{inspect(__MODULE__)}" end)
     opts = [strategy: :one_for_one]
     Supervisor.start_link(children, opts)
   end

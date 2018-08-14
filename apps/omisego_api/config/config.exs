@@ -1,5 +1,7 @@
 use Mix.Config
 
+# FIXME config - where :omisego_api configs belong? maybe in _server?
+
 config :omisego_api, fee_specs_file_path: "./../../fee_specs.json"
 config :omisego_eth, child_block_interval: 1000
 

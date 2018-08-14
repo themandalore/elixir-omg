@@ -22,8 +22,7 @@ defmodule OmiseGO.JSONRPC.Mixfile do
         # our own rpc port where OmiseGO.API is exposed
         omisego_api_rpc_port: 9656
       ],
-      extra_applications: [:logger],
-      mod: {OmiseGO.JSONRPC.Application, []}
+      extra_applications: [:logger]
     ]
   end
 
@@ -33,8 +32,8 @@ defmodule OmiseGO.JSONRPC.Mixfile do
       {:cowboy, "~> 1.1"},
       {:plug, "1.5.0", override: true},
       {:poison, "~> 3.1"},
-      # test can't run omisego_apis
-      {:omisego_api, in_umbrella: true, only: [:dev, :prod]}
+      #
+      {:omisego_api, in_umbrella: true}
     ]
   end
 end

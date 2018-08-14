@@ -19,6 +19,8 @@ defmodule OmiseGO.API.Integration.HappyPathTest do
 
   use ExUnitFixtures
   use ExUnit.Case, async: false
+
+  use OmiseGO.API.Fixtures
   use OmiseGO.Eth.Fixtures
   use OmiseGO.DB.Fixtures
 
@@ -38,11 +40,10 @@ defmodule OmiseGO.API.Integration.HappyPathTest do
     Application.put_env(:omisego_api, :ethereum_event_block_finality_margin, 2, persistent: true)
     # need to overide that to very often, so that many checks fall in between a single child chain block submission
     Application.put_env(:omisego_api, :ethereum_event_get_deposits_interval_ms, 10, persistent: true)
-    {:ok, started_apps} = Application.ensure_all_started(:omisego_api)
-    {:ok, started_jsonrpc} = Application.ensure_all_started(:omisego_jsonrpc)
+    {:ok, started_apps} = Application.ensure_all_started(:omisego_server)
 
     on_exit(fn ->
-      (started_apps ++ started_jsonrpc)
+      started_apps
       |> Enum.reverse()
       |> Enum.map(fn app -> :ok = Application.stop(app) end)
     end)

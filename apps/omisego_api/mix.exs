@@ -26,8 +26,7 @@ defmodule OmiseGO.API.MixProject do
         ethereum_event_max_block_range_in_deposits_query: 5,
         child_block_submit_period: 1
       ],
-      extra_applications: [:logger],
-      mod: {OmiseGO.API.Application, []}
+      extra_applications: [:logger]
     ]
   end
 

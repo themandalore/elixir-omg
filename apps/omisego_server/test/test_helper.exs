@@ -12,19 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-defmodule OmiseGO.JSONRPC.Application.Test do
-  @moduledoc """
-  Test the supervision tree stuff of the app
-  """
-
-  # FIXME
-
-  use ExUnitFixtures
-  use ExUnit.Case, async: false
-
-  # test "OmiseGO json rpc should start fine" do
-  #   assert {:ok, started} = Application.ensure_all_started(:omisego_jsonrpc)
-  #   assert :omisego_jsonrpc in started
-  #   for app <- started, do: :ok = Application.stop(app)
-  # end
-end
+ExUnit.configure(exclude: [integration: true])
+ExUnitFixtures.start()
+# loading all fixture files from the whole umbrella project
+ExUnitFixtures.load_fixture_files("../**/test/**/fixtures.exs")
+ExUnit.start()
