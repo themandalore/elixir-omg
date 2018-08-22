@@ -33,7 +33,12 @@ defmodule OMG.Watcher.BlockGetter do
           {:ok, Block.t() | Core.PotentialWithholding.t()} | {:error, Core.block_error(), binary(), pos_integer()}
   def get_block(requested_number) do
     {:ok, {requested_hash, _time}} = Eth.get_child_chain(requested_number)
-    rpc_response = OMG.JSONRPC.Client.call(:get_block, %{hash: requested_hash})
+
+    {duration, rpc_response} = :timer.tc(fn -> OMG.JSONRPC.Client.call(:get_block, %{hash: requested_hash}) end)
+
+    _ =
+      Logger.info(fn -> "get_block responded for \##{inspect(requested_number)} in #{inspect(duration / 1000)} ms" end)
+
     Core.validate_get_block_response(rpc_response, requested_hash, requested_number, :os.system_time(:millisecond))
   end
 
@@ -52,14 +57,6 @@ defmodule OMG.Watcher.BlockGetter do
       nil = Enum.find(response, &(!match?({:ok, _}, &1)))
       _ = UtxoDB.update_with(block)
       _ = Logger.info(fn -> "Consumed block \##{inspect(blknum)}" end)
-      {:ok, next_child} = Eth.get_current_child_block()
-      {new_state, blocks_numbers} = Core.get_new_blocks_numbers(state, next_child)
-      :ok = run_block_get_task(blocks_numbers)
-
-      _ =
-        Logger.info(fn ->
-          "Child chain seen at block \##{inspect(next_child)}. Getting blocks #{inspect(blocks_numbers)}"
-        end)
 
       child_block_interval = Application.get_env(:omg_eth, :child_block_interval)
 
@@ -68,7 +65,7 @@ defmodule OMG.Watcher.BlockGetter do
       eth_height = 0
       :ok = OMG.API.State.close_block(child_block_interval, eth_height)
 
-      {:noreply, new_state}
+      {:noreply, state}
     else
       {:needs_stopping, reason} ->
         _ = Logger.error(fn -> "Stopping BlockGetter becasue of #{inspect(reason)}" end)
@@ -92,7 +89,8 @@ defmodule OMG.Watcher.BlockGetter do
       Core.init(
         block_number,
         child_block_interval,
-        maximum_block_withholding_time_ms: maximum_block_withholding_time_ms
+        maximum_block_withholding_time_ms: maximum_block_withholding_time_ms,
+        maximum_number_of_pending_blocks: 100
       )
     }
   end
@@ -129,13 +127,22 @@ defmodule OMG.Watcher.BlockGetter do
 
   def handle_info({_ref, {:got_block, response}}, state) do
     # 1/ process the block that arrived and consume
-    {continue, new_state, blocks_to_consume, events} = Core.got_block(state, response)
+    {continue, state2, blocks_to_consume, events} = Core.got_block(state, response)
 
     Eventer.emit_events(events)
 
+    {:ok, next_child} = Eth.get_current_child_block()
+    {state3, blocks_numbers} = Core.get_new_blocks_numbers(state2, next_child)
+    :ok = run_block_get_task(blocks_numbers)
+
+    _ =
+      Logger.info(fn ->
+        "Child chain seen at block \##{inspect(next_child)}. Getting blocks #{inspect(blocks_numbers)}"
+      end)
+
     with :ok <- continue do
       Enum.each(blocks_to_consume, fn block -> GenServer.cast(__MODULE__, {:consume_block, block}) end)
-      {:noreply, new_state}
+      {:noreply, state3}
     else
       {:needs_stopping, reason} ->
         _ = Logger.error(fn -> "Stopping BlockGetter becasue of #{inspect(reason)}" end)
