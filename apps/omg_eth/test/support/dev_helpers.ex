@@ -93,8 +93,8 @@ defmodule OMG.Eth.DevHelpers do
   end
 
   def make_deposits(value, accounts, contract \\ nil) do
-    deposit = fn account ->
-      {:ok, account_enc} = import_unlock_fund(account)
+    deposit = fn %{addr: account_addr} = account ->
+      {:ok, account_enc} = Crypto.encode_address(account_addr)
 
       {:ok, deposit_tx_hash} = deposit(value, account_enc, contract)
       {:ok, receipt} = OMG.Eth.WaitFor.eth_receipt(deposit_tx_hash)
