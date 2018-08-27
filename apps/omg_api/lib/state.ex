@@ -24,7 +24,6 @@ defmodule OMG.API.State do
   alias OMG.API.State.Core
   alias OMG.API.State.Transaction
   alias OMG.DB
-  alias OMG.Watcher.Eventer
 
   use OMG.API.LoggerExt
 
@@ -45,8 +44,8 @@ defmodule OMG.API.State do
     GenServer.cast(__MODULE__, {:form_block, child_block_interval})
   end
 
-  def close_block(child_block_interval, eth_height) do
-    GenServer.call(__MODULE__, {:close_block, child_block_interval, eth_height})
+  def close_block(child_block_interval) do
+    GenServer.call(__MODULE__, {:close_block, child_block_interval})
   end
 
   @spec deposit(deposits :: [Core.deposit()]) :: :ok
@@ -156,11 +155,11 @@ defmodule OMG.API.State do
   end
 
   @doc """
-  Wraps up accumulated transactions submissions into a block, triggers db update and emits events to Eventer.
+  Wraps up accumulated transactions submissions into a block, triggers db update returns event triggers to emit.
 
   eth_height given is the Ethereum chain height where the block being closed got submitted, to be used with events.
   """
-  def handle_call({:close_block, child_block_interval, eth_height}, _from, state) do
+  def handle_call({:close_block, child_block_interval}, _from, state) do
     {duration, {:ok, {%Block{}, event_triggers, db_updates}, new_state}} =
       :timer.tc(fn -> Core.form_block(child_block_interval, state) end)
 
@@ -168,16 +167,7 @@ defmodule OMG.API.State do
 
     :ok = DB.multi_update(db_updates)
 
-    event_triggers =
-      event_triggers
-      |> Enum.map(fn event_trigger ->
-        event_trigger
-        |> Map.put(:submited_at_ethheight, eth_height)
-      end)
-
-    Eventer.emit_events(event_triggers)
-
-    {:reply, :ok, new_state}
+    {:reply, {:ok, event_triggers}, new_state}
   end
 
   @doc """
