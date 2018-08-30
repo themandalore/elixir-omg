@@ -1,5 +1,7 @@
 <img src="docs/assets/logo.png" align="right" />
 
+[![Coverage Status](https://coveralls.io/repos/github/omisego/elixir-omg/badge.svg)](https://coveralls.io/github/omisego/elixir-omg)
+
 The `elixir-omg` repository contains OmiseGO's Elixir implementation of Plasma and forms the basis for the OMG Network.
 
 **IMPORTANT NOTICE: Heavily WIP, expect anything**
