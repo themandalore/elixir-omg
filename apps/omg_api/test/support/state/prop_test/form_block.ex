@@ -16,25 +16,17 @@ defmodule OMG.API.State.PropTest.FormBlock do
   @moduledoc """
   Generator to form new block
   """
+  alias OMG.API.PropTest.Helper
+
   defmacro __using__(_opt) do
     quote location: :keep do
       defcommand :form_block do
-        alias OMG.API.Block
-        alias OMG.API.PropTest.Helper
-        alias OMG.API.State.Transaction
+        import OMG.API.State.PropTest.FormBlock
 
         def impl, do: StateCoreGS.form_block(1_000)
 
-        def post(%{model: %{history: history}}, [], {:ok, {_, transactions, _}} = block) do
-          expected_transactions =
-            history
-            |> Enum.take_while(&(elem(&1, 0) != :form_block))
-            |> Enum.filter(&(elem(&1, 0) == :transaction))
-            |> Enum.map(&elem(&1, 1))
-            |> Enum.reverse()
-
-          transactions = transactions |> Enum.map(fn %{tx: tx} -> Helper.format_transaction(tx) end)
-          expected_transactions == transactions
+        def post(meaningful_argname_1, meaningful_argname_2, meaningful_argname_3) do
+          do_post(meaningful_argname_1, meaningful_argname_2, meaningful_argname_3)
         end
 
         def next(%{model: %{history: history} = model, eth: %{blknum: number} = eth} = state, [], ret) do
@@ -48,5 +40,17 @@ defmodule OMG.API.State.PropTest.FormBlock do
         end
       end
     end
+  end
+
+  def do_post(%{model: %{history: history}}, [], {:ok, {_, transactions, _} = block}) do
+    expected_transactions =
+      history
+      |> Enum.take_while(&(elem(&1, 0) != :form_block))
+      |> Enum.filter(&(elem(&1, 0) == :transaction))
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.reverse()
+
+    transactions = transactions |> Enum.map(fn %{tx: tx} -> Helper.format_transaction(tx) end)
+    expected_transactions == transactions
   end
 end
