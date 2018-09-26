@@ -35,17 +35,14 @@ defmodule OMG.Watcher.DB.EthEventDB do
   def get(hash), do: Repo.get(__MODULE__, hash)
   def get_all, do: Repo.all(__MODULE__)
 
-  @spec insert_deposits([map()]) :: [{:ok, %__MODULE__{}} | {:error, Ecto.Changeset.t()}]
+  @spec insert_deposits([OMG.API.State.Core.deposit()]) :: [{:ok, %__MODULE__{}} | {:error, Ecto.Changeset.t()}]
   def insert_deposits(deposits) do
     deposits
-    |> Enum.map(fn %{hash: hash, blknum: blknum, owner: owner, currency: currency, amount: amount} ->
-      insert_deposit(hash, blknum, owner, currency, amount)
-    end)
+    |> Enum.map(&insert_deposit/1)
   end
 
-  @spec insert_deposit(binary(), pos_integer(), binary(), binary(), pos_integer()) ::
-          {:ok, %__MODULE__{}} | {:error, Ecto.Changeset.t()}
-  defp insert_deposit(hash, blknum, owner, currency, amount) do
+  @spec insert_deposit(OMG.API.State.Core.deposit()) :: {:ok, %__MODULE__{}} | {:error, Ecto.Changeset.t()}
+  defp insert_deposit(%{blknum: blknum, owner: owner, currency: currency, amount: amount, hash: hash}) do
     {:ok, _} =
       %__MODULE__{
         hash: hash,
