@@ -21,6 +21,7 @@ defmodule OMG.API.Crypto do
   @type sig_t() :: <<_::520>>
   @type pub_key_t() :: <<_::512>>
   @type priv_key_t() :: <<_::256>> | <<>>
+  @type hash_t() :: <<_::256>>
   @type address_t() :: <<_::160>>
 
   @doc """

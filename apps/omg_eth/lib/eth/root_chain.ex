@@ -142,6 +142,9 @@ defmodule OMG.Eth.RootChain do
     Eth.call_contract(contract, "getExit(uint256)", [utxo_pos], [:address, :address, {:uint, 256}])
   end
 
+  @doc """
+  Returns hash and timestamp of child block for given block number
+  """
   def get_child_chain(blknum, contract \\ nil) do
     contract = contract || from_hex(Application.get_env(:omg_eth, :contract_addr))
     Eth.call_contract(contract, "getChildChain(uint256)", [blknum], [{:bytes, 32}, {:uint, 256}])
@@ -164,7 +167,11 @@ defmodule OMG.Eth.RootChain do
     signature = "Deposit(address,uint256,address,uint256)"
 
     with {:ok, logs} <- Eth.get_ethereum_events(block_from, block_to, signature, contract),
-         do: {:ok, Enum.map(logs, &decode_deposit/1)}
+         do:
+           {:ok,
+            logs
+            |> Enum.map(&decode_deposit/1)
+            |> Enum.map(&add_block_hash(&1, contract))}
   end
 
   @doc """
@@ -209,6 +216,11 @@ defmodule OMG.Eth.RootChain do
       {non_indexed_keys, non_indexed_key_types},
       {indexed_keys, indexed_keys_types}
     )
+  end
+
+  defp add_block_hash(%{blknum: blknum} = deposit, contract) do
+    {:ok, {hash, _}} = get_child_chain(blknum, contract)
+    deposit |> Map.put(:hash, hash)
   end
 
   defp decode_exit_started(log) do

@@ -75,12 +75,13 @@ defmodule OMG.EthTest do
   @tag fixtures: [:contract]
   test "gets events with various fields and topics", %{contract: contract} do
     {:ok, _} =
-      Eth.RootChain.deposit(1, contract.authority_addr, contract.contract_addr)
+      Eth.RootChain.deposit(10, contract.authority_addr, contract.contract_addr)
       |> Eth.DevHelpers.transact_sync!()
 
     {:ok, height} = Eth.get_ethereum_height()
+    {:ok, {child_hash, _ts}} = Eth.RootChain.get_child_chain(1, contract.contract_addr)
 
-    assert {:ok, [%{amount: 1, blknum: 1, owner: contract.authority_addr, currency: @eth}]} ==
+    assert {:ok, [%{hash: child_hash, amount: 10, blknum: 1, owner: contract.authority_addr, currency: @eth}]} ==
              Eth.RootChain.get_deposits(1, height, contract.contract_addr)
   end
 end

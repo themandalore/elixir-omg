@@ -47,7 +47,8 @@ defmodule OMG.API.State.Core do
           blknum: non_neg_integer(),
           currency: Crypto.address_t(),
           owner: Crypto.address_t(),
-          amount: pos_integer()
+          amount: pos_integer(),
+          hash: Crypto.hash_t()
         }
   @type exit_t() :: %{
           utxo_pos: pos_integer(),
