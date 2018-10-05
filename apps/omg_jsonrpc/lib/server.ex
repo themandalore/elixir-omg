@@ -25,6 +25,8 @@ defmodule OMG.JSONRPC.Server.Handler do
   @api_module Application.fetch_env!(:omg_jsonrpc, :api_module)
 
   def handle_request(method, params) do
-    OMG.JSONRPC.Exposer.handle_request_on_api(method, params, @api_module)
+    t = OMG.JSONRPC.Exposer.handle_request_on_api(method, params, @api_module)
+    IO.inspect {:elo, t}
+    t
   end
 end

@@ -41,14 +41,39 @@ defmodule OMG.Watcher.Integration.InvalidExitTest do
   end
 
   #  TODO compelte this test
-  @tag fixtures: [:watcher_sandbox, :alice, :alice_deposits]
-  @tag :skip
+  @tag fixtures: [:watcher_sandbox, :child_chain, :alice, :alice_deposits]
   test "transaction which is using already spent utxo from exit and happened after m_sv causes to emit invalid_block event",
        %{alice: alice, alice_deposits: {deposit_blknum, _}} do
+    defmodule MiddleManChildChain do
+      use JSONRPC2.Server.Handler
+      alias OMG.JSONRPC.Client
+
+      def empty_block, do: [] |> API.Block.hashed_txs_at(1000)
+      def different_hash, do: <<0::256>>
+
+      def handle_request(method, params) do
+        IO.inspect "tutaj"
+        OMG.JSONRPC.Client.encode(
+         %{
+           blknum: 39000,
+           tx_hash:
+             <<180, 157, 52, 128, 186, 142, 41, 233, 204, 153, 121, 133, 65, 72, 66, 158, 43, 118, 206, 234, 145, 68,
+               25, 41, 64, 24, 174, 190, 87, 100, 86, 72>>,
+           tx_index: 0
+         })
+
+        #        IO.inspect Client.call(:submit, params)
+        #        Client.encode(%API.Block{empty_block() | hash: different_hash()})
+      end
+    end
+
+    JSONRPC2.Servers.HTTP.http(MiddleManChildChain, port: 9657)
+
     {:ok, _, _socket} = subscribe_and_join(socket(), Channel.Byzantine, "byzantine")
 
     # TODO remove this tx , use directly deposit_blknum to get_exit_data
     tx = API.TestHelper.create_encoded([{deposit_blknum, 0, 0, alice}], @eth, [{alice, 10}])
+
     {:ok, %{blknum: deposit_blknum}} = Client.call(:submit, %{transaction: tx})
 
     IntegrationTest.wait_until_block_getter_fetches_block(deposit_blknum, @timeout)
@@ -60,16 +85,16 @@ defmodule OMG.Watcher.Integration.InvalidExitTest do
       "utxo_pos" => utxo_pos
     } = IntegrationTest.get_exit_data(deposit_blknum, 0, 0)
 
-    {:ok, txhash} =
-      Eth.RootChain.start_exit(
-        utxo_pos,
-        txbytes,
-        proof,
-        sigs,
-        alice.addr
-      )
+    #    {:ok, txhash} =
+    #      Eth.RootChain.start_exit(
+    #        utxo_pos,
+    #        txbytes,
+    #        proof,
+    #        sigs,
+    #        alice.addr
+    #      )
 
-    {:ok, %{"status" => "0x1"}} = Eth.WaitFor.eth_receipt(txhash, @timeout)
+    #    {:ok, %{"status" => "0x1"}} = Eth.WaitFor.eth_receipt(txhash, @timeout)
 
     slow_exit_validator_block_margin = Application.get_env(:omg_watcher, :slow_exit_validator_block_margin)
     {:ok, current_child_block} = Eth.RootChain.get_current_child_block()
@@ -79,16 +104,19 @@ defmodule OMG.Watcher.Integration.InvalidExitTest do
     IntegrationTest.wait_until_block_getter_fetches_block(after_m_sv, @timeout)
 
     tx = API.TestHelper.create_encoded([{deposit_blknum, 0, 0, alice}], @eth, [{alice, 10}])
+
+    Application.put_env(:omg_jsonrpc, :child_chain_url, "http://localhost:9657")
+#    IO.inspect(Client.call(:submit, %{transaction: tx}))
     {:ok, %{blknum: double_spend_block_nr, tx_hash: tx_hash}} = Client.call(:submit, %{transaction: tx})
 
-    invalid_block_event =
-      Client.encode(%Event.InvalidBlock{
-        error_type: :tx_execution,
-        hash: <<>>,
-        number: double_spend_block_nr
-      })
+    #    invalid_block_event =
+    #      Client.encode(%Event.InvalidBlock{
+    #        error_type: :tx_execution,
+    #        hash: <<>>,
+    #        number: double_spend_block_nr
+    #      })
 
     # TODO invalid_block_event => ^invalid_block_event
-    assert_push("invalid_block", invalid_block_event, 4_0000)
+    #    assert_push("invalid_block", invalid_block_event, 4_0000)
   end
 end
